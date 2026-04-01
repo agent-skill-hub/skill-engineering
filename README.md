@@ -1,104 +1,104 @@
 # Skill Engineering
 
-**Your AI skill has 200 domain knowledge entries. You dumped them all into SKILL.md. Now AI performance tanks every time it loads.**
+**你往 SKILL.md 里塞了 200 条领域知识，结果 AI 每次加载都变慢变蠢。**
 
-This is the #1 mistake in skill design: treating SKILL.md as a knowledge dump instead of a retrieval guide.
+这是 skill 设计的头号错误：把 SKILL.md 当知识仓库，而不是检索指南。
 
-## The Insight
+## 核心思想
 
-> AI doesn't need to *know* knowledge. It needs to *find* knowledge.
+> AI 不需要「记住」知识，只需要「找到」知识。
 
-A well-designed skill keeps context consumption **constant** regardless of knowledge scale — 50 entries or 5,000, the SKILL.md stays under 500 lines. Rules are fixed. Data is pulled on demand.
+设计良好的 skill，上下文消耗是**恒定的**——不管背后有 50 条还是 5000 条知识，SKILL.md 始终控制在 500 行以内。规则是固定的，数据按需拉取。
 
-## Architecture
+## 架构
 
 ```
 skill/
-├── SKILL.md           ← Rules + search guide + decision table (the brain)
-├── references/        ← Process docs, loaded on demand (the narrative)
-├── scripts/           ← BM25 search, domain routing (the retrieval)
-└── data/              ← CSV/JSON, one row = one entity (the knowledge)
+├── SKILL.md           ← 规则 + 检索指引 + 决策表（大脑）
+├── references/        ← 流程文档，按需加载（叙事层）
+├── scripts/           ← BM25 检索、领域路由（检索层）
+└── data/              ← CSV/JSON，一行 = 一个知识实体（数据层）
 ```
 
-Most skills only need `SKILL.md`. The rest kicks in when scale demands it.
+大多数 skill 只需要 SKILL.md 就够了。其余部分在规模需要时才启用。
 
-## The Form × Scale Framework
+## 形态 × 规模 分类框架
 
-Not all knowledge is the same shape. A "config template" and an "auth flow diagram" are fundamentally different — yet most skill designers treat them identically and wonder why things break.
+不是所有知识长得都一样。「配置模板」和「认证流程图」是完全不同的东西——但大多数 skill 设计者把它们一视同仁，然后纳闷为什么效果不好。
 
-**Two questions. That's it.**
+**两个问题，搞定一切。**
 
-**Q1: Is it a countable entity or a process description?**
+**问题一：它是可数实体，还是流程描述？**
 
-| | Countable Entity | Process Description |
+| | 可数实体 | 流程描述 |
 |---|---|---|
-| Looks like | A term, a config, an error code | A multi-step flow, an architecture chain |
-| Test | Can you put it in one CSV row? | Does it lose meaning when flattened? |
-| Storage | Inline → Table → CSV | Inline → `references/*.md` |
+| 长什么样 | 一个术语、一个配置、一个错误码 | 一个多步骤流程、一个架构链路 |
+| 判断方法 | 能放进一行 CSV 吗？ | 压扁了会丢失语义吗？ |
+| 存储方式 | 内联 → 术语表 → CSV | 内联 → `references/*.md` |
 
-**Q2: How many?**
+**问题二：有多少？**
 
-For entities:
+可数实体：
 
-| Count | Where it goes |
+| 数量 | 放哪里 |
 |---|---|
-| ≤ 20 | Inline in SKILL.md as rules |
-| 20–50 | Terminology table in SKILL.md |
-| 50+ | `data/*.csv` + BM25 search script |
+| ≤ 20 | 内联在 SKILL.md 里作为规则 |
+| 20–50 | SKILL.md 里的术语表 |
+| 50+ | `data/*.csv` + BM25 检索脚本 |
 
-For process descriptions:
+流程描述：
 
-| Length | Where it goes |
+| 长度 | 放哪里 |
 |---|---|
-| ≤ 30 lines | Inline in SKILL.md |
-| 30+ lines | `references/*.md`, one topic per file |
+| ≤ 30 行 | 内联在 SKILL.md |
+| 30+ 行 | `references/*.md`，一个主题一个文件 |
 
-## Why `references/`?
+## 为什么需要 `references/`？
 
-Because CSV kills narratives.
+因为 CSV 会杀死叙事。
 
-An order processing pipeline (validation → payment → fulfillment → notification) has sequential logic, branching conditions, and error recovery paths. Flatten that into a CSV row and you get garbage.
+一个订单处理流程（校验 → 支付 → 履约 → 通知）包含顺序逻辑、分支条件和异常恢复路径。把它压进一行 CSV，得到的是垃圾。
 
-`references/` keeps narratives intact. SKILL.md holds a **load guide** — not the content itself, but *when* to load each file:
+`references/` 保持叙事完整。SKILL.md 只放一份**加载指南**——不是内容本身，而是告诉 AI「什么时候加载哪个文件」：
 
 ```markdown
-| File | When to Load |
-|------|-------------|
-| `references/order-flow.md` | Writing order-related code |
-| `references/auth-chain.md` | Modifying login or permissions |
+| 文件 | 何时加载 |
+|------|---------|
+| `references/order-flow.md` | 编写订单相关代码时 |
+| `references/auth-chain.md` | 修改登录或权限逻辑时 |
 ```
 
-AI loads what it needs, when it needs it. Zero waste.
+AI 按需加载，零浪费。
 
-## The Iron Rule
+## 铁律
 
-**≤ 50 entries? Keep everything in SKILL.md. Don't touch CSV. Don't create scripts.**
+**≤ 50 条知识？全部放在 SKILL.md 里。不要碰 CSV，不要写脚本。**
 
-Most skills are Light level. The urge to over-engineer is the second most common mistake after knowledge dumping.
+绝大多数 skill 都是轻量级的。过度工程化是仅次于知识堆砌的第二大常见错误。
 
-## What This Produces
+## 效果对比
 
-| Before | After |
+| 改造前 | 改造后 |
 |---|---|
-| 800-line SKILL.md, loaded every time | 300-line SKILL.md + on-demand data |
-| Process flows crammed into CSV rows | `references/*.md` preserving full narrative |
-| AI searches everything, returns noise | Domain-routed BM25, top 3 results only |
-| "Add knowledge" = edit SKILL.md | "Add knowledge" = append a CSV row |
-| Scale kills performance | Scale is invisible to context window |
+| 800 行 SKILL.md，每次全量加载 | 300 行 SKILL.md + 按需数据 |
+| 流程描述硬塞进 CSV 行 | `references/*.md` 保留完整叙事 |
+| AI 全量搜索，返回大量噪音 | 领域路由 + BM25，只返回前 3 条 |
+| 「加知识」= 改 SKILL.md | 「加知识」= 追加一行 CSV |
+| 规模上去性能就崩 | 规模对上下文窗口完全透明 |
 
-## Quick Start
+## 快速上手
 
-1. **Classify** your knowledge — entity or process? How many?
-2. **Place** it — inline, table, CSV, or references — per the framework above
-3. **Write** SKILL.md as a retrieval guide, not a knowledge dump
-4. **Verify** against the [checklist in SKILL.md](./SKILL.md#checklist-before-delivering-a-new-skill)
+1. **分类** —— 实体还是流程？有多少？
+2. **归位** —— 按上面的框架决定：内联、术语表、CSV 还是 references
+3. **编写** SKILL.md —— 写检索指南，不是知识仓库
+4. **验证** —— 对照 [SKILL.md 中的检查清单](./SKILL.md#checklist-before-delivering-a-new-skill)
 
-## Who This Is For
+## 适用场景
 
-You're building a skill that involves domain expertise — style libraries, error code catalogs, API configs, business flows, compliance rules. You need that knowledge accessible to AI without blowing up the context window.
+你正在构建一个涉及领域专业知识的 skill——风格库、错误码大全、接口配置、业务流程、合规规则。你需要让 AI 能访问这些知识，同时不撑爆上下文窗口。
 
-This meta-skill gives your AI the architecture to handle it.
+这个元技能提供的就是这套架构。
 
 ---
 
-*Built for AI agents. Designed by humans who got tired of watching skills break at scale.*
+*为 AI 智能体而建。由那些受够了 skill 在规模面前崩溃的人设计。*
