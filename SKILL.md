@@ -15,7 +15,59 @@ description: "Use when creating or restructuring any skill that involves domain 
 
 If total knowledge entries <= 50, DO NOT create CSV, scripts, or external data files. Inline everything in SKILL.md. Most skills are Light level — keep them that way.
 
+## Step 0: Domain Scope — Single or Multi?
+
+Before classifying knowledge by form and scale, first determine **domain scope**:
+
+| Signal | Scope | Architecture |
+|--------|-------|-------------|
+| All knowledge shares the same trigger conditions and usage scenarios | **Single domain** | 1 skill — proceed to Knowledge Classification below |
+| Knowledge splits into 2+ groups with **independent triggers, independent process descriptions, and independent usage scenarios** | **Multi-domain** | Retrieval layer + domain skills (see below) |
+
+**"Independent" means:** a user working in domain A rarely needs domain B's process descriptions in the same context. If they do, it's for looking up a term or config — not reading the full flow.
+
+### Multi-Domain Architecture
+
+Each box below is an **independent skill** (its own directory under `skills/`, its own SKILL.md, its own trigger conditions). They are peers, not nested:
+
+```
+skills/
+  retrieval-skill/          ← Shared search layer
+    SKILL.md                ← Search guide only (which domain, what command)
+    data/*.csv              ← All entity data (terminology, configs, etc.)
+    scripts/                ← BM25 search engine
+
+  domain-a/                 ← Independent skill, triggered by domain A tasks
+    SKILL.md                ← Trigger + rules + flow chains (<=500 lines)
+    references/             ← Long-form details for this domain only
+
+  domain-b/                 ← Independent skill, triggered by domain B tasks
+    SKILL.md
+    references/
+```
+
+Retrieval skill is triggered by entity lookups (term, config, queue name). Domain skills are triggered by their specific task context (e.g., "debug payment flow" triggers domain-a, not domain-b). Multiple skills can be loaded in the same session when needed.
+
+**Separation of concerns:**
+- **Retrieval skill** owns entity data (countable: terms, configs, queues, services). No process descriptions. SKILL.md is just a search guide.
+- **Domain skills** own process descriptions (flows, architectures, auth chains). Entity lookups go through the retrieval skill's BM25 search — no need to duplicate terminology tables.
+- Each domain skill's SKILL.md stays within the 500-line budget because it only covers one domain.
+
+**When NOT to split into multi-domain:**
+- Domains are tightly coupled (understanding A requires reading B's full flow) → single skill
+- Total process descriptions across all domains < 100 lines → single skill, inline everything
+- Only 1-2 domains → single skill with references is fine
+
+### How to Identify Domains
+
+A domain = a group of knowledge with a shared trigger condition. Test: "If a user asks about X, do they need Y's full flow description in the same context?"
+
+- If yes → same domain
+- If they only need to look up a term/config from Y → separate domains, connected by retrieval layer
+
 ## Knowledge Classification → Action
+
+**Applies within a single domain (or a single-domain skill).** For multi-domain setups, apply this classification independently within each domain skill and the retrieval skill.
 
 Knowledge has two orthogonal dimensions: **form** (what it looks like) and **scale** (how many).
 
@@ -165,6 +217,7 @@ domain_keywords = {
 
 | Do Not | Do Instead |
 |---|---|
+| Merge multi-domain knowledge into 1 skill | Check domain scope first — if domains have independent triggers, use retrieval layer + domain skills |
 | Dump all knowledge into SKILL.md | Classify by form + scale, sink accordingly |
 | Flatten process descriptions into CSV rows | Put in `references/*.md` — narratives lose meaning in CSV |
 | CSV without search_cols/output_cols separation | Design schema with separate search and output fields |
@@ -177,6 +230,7 @@ domain_keywords = {
 
 ## Checklist: Before Delivering a New Skill
 
+- [ ] **Domain scope assessed** — single domain → 1 skill; multi-domain → retrieval layer + domain skills
 - [ ] Knowledge classified by **form** (entity vs process) AND **scale** (count/lines)
 - [ ] Process descriptions >30 lines → `references/*.md`, not CSV rows
 - [ ] SKILL.md has load guide for each reference file (when to load, not just what)
